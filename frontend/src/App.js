@@ -1,40 +1,65 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
+import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 
-import logo from "./logo.svg";
-import "./App.css";
+const App = () => {
+  const [user, setUser] = useState(null);
 
-function App() {
+  const handleLoginSuccess = async (credentialResponse) => {
+    if (credentialResponse.credential) {
+      try {
+        const response = await axios.post(
+          `${process.env.REACT_APP_API_BASE_URL}/auth/google-login`,
+          { token: credentialResponse.credential },
+          { withCredentials: true }
+        );
+        setUser(response.data.user);
+      } catch (error) {
+        console.error("Login failed", error);
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    await axios.post(
+      `${process.env.REACT_APP_API_BASE_URL}/auth/logout`,
+      {},
+      { withCredentials: true }
+    );
+    setUser(null);
+  };
+
   useEffect(() => {
-    const checkHealth = async () => {
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_BASE_URL}/health`
-      );
-
-      console.log("HEALTH:", response);
+    const checkSession = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.REACT_APP_API_BASE_URL}/auth/me`,
+          { withCredentials: true }
+        );
+        setUser(response.data.user);
+      } catch (err) {
+        setUser(null);
+      }
     };
 
-    checkHealth();
+    checkSession();
   }, []);
 
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {user ? (
+        <>
+          <div>Welcome, {user.firstName}!</div>
+          <button onClick={handleLogout}>Logout</button>
+        </>
+      ) : (
+        <GoogleLogin
+          onSuccess={handleLoginSuccess}
+          onError={() => console.log("Login Failed")}
+        />
+      )}
     </div>
   );
-}
+};
 
 export default App;
