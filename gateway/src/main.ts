@@ -1,16 +1,22 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+  const configService = app.get(ConfigService);
+
+  const frontendOrigin =
+    configService.get<string>('FRONTEND_ORIGIN') || 'http://localhost:3000';
 
   app.enableCors({
     origin: frontendOrigin,
     credentials: true, // only if using cookies or auth headers
   });
 
-  await app.listen(process.env.PORT ?? 3001);
+  const port = configService.get<number>('PORT') || 3001;
+
+  await app.listen(port);
 }
 bootstrap();
