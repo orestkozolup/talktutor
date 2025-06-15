@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
 import axios from "axios";
+import { useEffect, useState } from "react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 
-const App = () => {
-  const [user, setUser] = useState(null);
+import { User } from "./types";
 
-  const handleLoginSuccess = async (credentialResponse) => {
+const App = () => {
+  const [user, setUser] = useState<User | null>(null);
+
+  const handleLoginSuccess = async (credentialResponse: CredentialResponse) => {
     if (credentialResponse.credential) {
       try {
         const response = await axios.post(
