@@ -7,12 +7,16 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import axios from 'axios';
 import { Response, Request } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import * as jwt from 'jsonwebtoken';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const oAuthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const USER_SERVICE_URL =
+  process.env.USER_SERVICE_URL || 'http://localhost:3002';
 
 @Controller('auth')
 export class AuthController {
@@ -28,12 +32,27 @@ export class AuthController {
       return res.status(400).json({ message: 'Invalid Google token' });
     }
 
-    const appJwt = jwt.sign(
-      {
+    let user;
+    try {
+      const response = await axios.post(`${USER_SERVICE_URL}/users`, {
         email: payload.email,
         firstName: payload.given_name,
         lastName: payload.family_name,
         picture: payload.picture,
+        googleId: payload.sub,
+      });
+      user = response.data;
+    } catch (err) {
+      console.error('Failed to create/fetch user:', err.message);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+
+    const appJwt = jwt.sign(
+      {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        picture: user.picture,
         sub: payload.sub,
       },
       process.env.JWT_SECRET,
@@ -49,10 +68,10 @@ export class AuthController {
 
     res.json({
       user: {
-        email: payload.email,
-        firstName: payload.given_name,
-        lastName: payload.family_name,
-        picture: payload.picture,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        picture: user.picture,
       },
     });
   }
